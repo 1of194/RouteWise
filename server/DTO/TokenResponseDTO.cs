@@ -1,7 +1,4 @@
-﻿using server.Models;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace server.DTO
+﻿namespace server.DTO
 {
     public class TokenResponseDTO
     {

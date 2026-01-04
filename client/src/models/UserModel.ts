@@ -11,6 +11,7 @@ export enum PageType {
 
 export type LoginResponse = {
     Message : string,
+    user: User,
     accessToken: string,  
     
 }

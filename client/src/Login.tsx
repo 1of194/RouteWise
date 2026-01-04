@@ -3,29 +3,25 @@ import { login } from "./api";
 import type { PageType } from "./models/UserModel";
 import { CheckCircle, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "./authContext";
 
 
-interface loginProps {
-  onLogin: (authenticated: boolean) => void;  // receives boolean value from parent
-  //  and child return nothing to the parent
-  onRegister: (authenticated:boolean) => void;
-}
 
-
-function Login({onLogin, onRegister}: loginProps) {
+function Login() {
+  const {loginAction} = useAuth();
 
     const navigate = useNavigate();
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
-    const [passwordInfo, setPasswordInfo] = useState<string[]>([]);
-    const [isValid, setIsValid] = useState<boolean> (false);
-    const [currentPage, setCurrentPage] = useState<PageType> (1);
-    const [success, setSuccess] = useState<boolean> (false);
-    const [message, setMessage] = useState<string> ('');
+    const [passwordInfo, setPasswordInfo] = useState<string[]>([]);  // Stores missing password rules
+    const [isValid, setIsValid] = useState<boolean> (false);    // Controls button 'disabled' state
+    const [currentPage, setCurrentPage] = useState<PageType> (1);  // 1 for Login, 2 for Register
+    const [success, setSuccess] = useState<boolean> (false);  // UI state for success alerts
+    const [message, setMessage] = useState<string> ('');    // API response message
 
     
 
-
+    // Logic: Password Validation
     const passwordRequirements = ()=> {
 
         const hasMinLength = password.length >= 8;
@@ -33,6 +29,7 @@ function Login({onLogin, onRegister}: loginProps) {
         const hasNumber = /\d/.test(password);
         const hasSpecialChar = /[^a-zA-Z0-9]/.test(password);
 
+        // Update 'isValid' state based on all rules passing
         setIsValid(hasMinLength && startsWithUppercase && hasNumber && hasSpecialChar);
 
         const failedRules = [];
@@ -46,13 +43,18 @@ function Login({onLogin, onRegister}: loginProps) {
     };
     
     useEffect(() => {
-        passwordRequirements();
-      }, [password]);
+      if (currentPage !== 1){  // ONLY FOR registration
+
+         passwordRequirements();
+      }
+       
+      }, [password, currentPage, username]);
       
+      //Clear the "Requirements Met" message after 2 seconds
       useEffect(() => {
         if (isValid) {
-          const timer = setTimeout(() => setPasswordInfo([]), 2000);
-          return () => clearTimeout(timer);
+          const timer = setTimeout(() => setPasswordInfo([]), 2000);  
+          return () => clearTimeout(timer);  // Cleanup timer if user types again
         }
       }, [isValid]);
       
@@ -81,10 +83,11 @@ function Login({onLogin, onRegister}: loginProps) {
             
             setMessage(result.Message || "Login successful");
 
-            // Call onLogin FIRST to update parent state
-            onLogin(true);
+            // Sync with AuthProvider: Updates session and global user state
+            loginAction(result.user, result.accessToken)
+            
     
-            // Redirect to homepage
+            // Redirect to home after a brief delay so user can see success message
             setTimeout(() => {
                 navigate('/');
             }, 1500);
@@ -100,13 +103,17 @@ function Login({onLogin, onRegister}: loginProps) {
           console.error(error);
         }
         }
+        // Handling Registration (Page 2)
         else {
-        // Registration
+        
         try {
           const registerResponse = await login(username, password, 2);
     
         setSuccess(true);
-        onRegister(true);
+
+        // Log user in automatically after successful registration
+        loginAction(registerResponse.user, registerResponse.accessToken);
+
         setMessage(registerResponse.Message || "Registration successful");
         setTimeout(() => {
             
@@ -125,8 +132,8 @@ function Login({onLogin, onRegister}: loginProps) {
 
     return (
         <main className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
-            
             <section className="w-full max-w-md bg-white rounded-lg shadow-md p-6 space-y-6">
+            {/* API Feedback Alert */}
             {message && (success ? (
         <div className="flex items-center gap-2 p-4 rounded-md bg-green-100 border border-green-400 text-green-700 text-sm">
           <CheckCircle className="w-5 h-5 text-green-600" />
@@ -139,6 +146,7 @@ function Login({onLogin, onRegister}: loginProps) {
         </div>
       )
       )}
+      {/* Tab Switcher: Login vs Register */}
       <header className="flex justify-center space-x-4">
                     <button 
                         type="button"
@@ -158,6 +166,7 @@ function Login({onLogin, onRegister}: loginProps) {
                     </button>
                 </header>
 
+                {/* Form Logic */}              
                 <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
                     <div>
                         <label htmlFor="username" className="text-sm font-medium text-gray-700">
@@ -186,6 +195,7 @@ function Login({onLogin, onRegister}: loginProps) {
                             onChange={(e) => { setPassword(e.target.value); }}
                         />
                     </div>
+                    {/* Conditional Rendering: Password requirements (only for registration) */}
                     {currentPage== 2 &&( isValid ? <p className="text-sm text-green-500">Your password fulfills all the required criteria</p>  : (
                         <div className="text-sm text-red-500">
                             {passwordInfo.map((info, index) => (

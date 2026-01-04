@@ -2,9 +2,6 @@
 using server.Models;
 using server.DTO;
 using System.Text.Json;
-using System.Globalization;
-using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
 using server.Services;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -28,7 +25,9 @@ namespace server.Controllers
             _routeOptimization = routeOptimization;
             _cache = cache;
         }
-            
+
+        
+        
         private static string GetPropString(JsonElement props, params string[] keys)
 {
 	foreach (var k in keys)
@@ -82,7 +81,7 @@ namespace server.Controllers
             JsonElement resultsArray;
             if (jsonDoc.RootElement.ValueKind == JsonValueKind.Array)
             {
-                resultsArray = jsonDoc.RootElement;
+                resultsArray = jsonDoc.RootElement;  
             }
             else if (jsonDoc.RootElement.TryGetProperty("features", out var features) && features.ValueKind == JsonValueKind.Array)
             {
@@ -177,6 +176,7 @@ namespace server.Controllers
             // Trigger route optimization once enough points collected
             if (deliveryList.Count >= 4 && geoList.Count >= 4)
             {
+                // Call the route optimization service
                 var addresses = _routeOptimization.RouteOptimazer(deliveryList, geoList);
 
                 // Clear cache after processing
@@ -189,38 +189,8 @@ namespace server.Controllers
             return Ok(new { Message = "Address added successfully" });
         }
 
-        // DELETE api/<ValuesController>/5
-        [HttpDelete("addresses/{id}")]
-        public async Task<ActionResult> DeleteAddress(int id)
-        {
-            var deleteAddress = await _routeContext.DeliveryAddresses.FindAsync(id);
 
-            if (deleteAddress == null)
-            {
-                return NotFound(); // 404 if not found
-            }
-
-            _routeContext.DeliveryAddresses.Remove(deleteAddress);
-            await _routeContext.SaveChangesAsync();
-
-            return NoContent(); // 204 after successful deletion
-        }
-
-        [HttpDelete("geolocations/{id}")]
-        public async Task<ActionResult> DeleteGeoLocations(int id)
-        {
-            var deleteGeoLocation = await _routeContext.GeoLocations.FindAsync(id);
-
-            if (deleteGeoLocation == null)
-            {
-                return NotFound(); // 404 if not found
-            }
-
-            _routeContext.GeoLocations.Remove(deleteGeoLocation);
-            await _routeContext.SaveChangesAsync();
-
-            return NoContent(); // 204 after successful deletion
-        }
+       
     }
 
 

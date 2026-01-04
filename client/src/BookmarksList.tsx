@@ -1,7 +1,7 @@
 import { useState,useEffect } from "react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import axios from "axios";
-import { BACKEND_API_KEY } from "./HomePage";
+import { BACKEND_API_KEY } from "./api";
 import type { DeliveryAddresses } from "./models/deliveryAddressModel";
 
 
@@ -12,7 +12,7 @@ interface BookmarksListProps {
 }
 
 
-// date format
+// Formatting configuration for the localized date strings
 const options: Intl.DateTimeFormatOptions = {
   weekday: "long",
   year: "numeric",
@@ -31,15 +31,22 @@ function BookmarksList({
   isPanelOpen,
   onClose,
 }: BookmarksListProps) {
+  // Tracks which bookmark index is currently expanded to show the full route
   const [expanded, setExpanded] = useState<number | null>(null);
+  // Stores the list of route bookmarks retrieved from the database
   const [fetchedBookmarks, setFetchedBookmarks] = useState<DeliveryAddresses[]>([]);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-
+  /**
+   * Toggles the expansion of a route. If already open, it closes it.
+   */
   const toggleExpand = (index: number) => {
     setExpanded(expanded === index ? null : index);
   };
 
+  /**
+   * Fetches all saved bookmarks for the authenticated user
+   */
   const fetchBookmarks = async () => {
    
    
@@ -66,17 +73,21 @@ function BookmarksList({
     }
   };
   
-  
+  // Initial load: fetch data when the component mounts
   useEffect(() => {
     
     fetchBookmarks();
     
   }, []);
 
+  /**
+   * Removes a bookmark from the database and updates the UI
+   */
   const handleDelete = async (id: number) => {
   try {
     const token = sessionStorage.getItem("token");
 
+    // 204 No Content confirms successful deletion
     const response = await axios.delete(`${BACKEND_API_KEY}/bookmark/${id}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       withCredentials: true,
@@ -119,7 +130,7 @@ function BookmarksList({
         className={`fixed top-0 right-0 h-full w-1/3 bg-white shadow-lg z-50 transform transition-transform duration-300 ${isPanelOpen ? "translate-x-0" : "translate-x-full"
           }`}
       >
-        
+        {/* Action Notifications */}
         <div className="p-6 overflow-y-auto h-full space-y-4">
         {notification && (
           <div
@@ -130,6 +141,7 @@ function BookmarksList({
             {notification.message}
           </div>
         )}
+          {/* List Rendering Logic */}
           {fetchedBookmarks && fetchedBookmarks.length > 0 ?
             (fetchedBookmarks?.map((bookmark, index) => {
               const addresses =

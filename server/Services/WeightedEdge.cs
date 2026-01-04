@@ -3,12 +3,14 @@
 namespace server.Services
 
 {
+    /// Represents a connection between two geographical points.
+    /// In graph theory, this is a "Weighted Edge" where the weight is physical distance.
 
     public class WeightedEdge
     {
         public GeoLocation Source { get; set; }
         public GeoLocation Destination { get; set; }
-        public double Weight { get; set; } // distance in km   
+        public double Weight { get; set; } // The distance of this path in km 
 
         public WeightedEdge(GeoLocation source, GeoLocation destination, double weight)
         {
@@ -18,10 +20,16 @@ namespace server.Services
         }
     }
 
+    /// A Graph structure representing a network of locations.
+    /// Uses an Adjacency List for efficient memory usage when nodes have few connections.
     public class Graph
     {
-        private int vertices;
+        private int vertices;  // Total number of locations (nodes)
+
+        // Maps Database IDs (which could be non-sequential) to array indexes
         public Dictionary<int, int> IdtoIndex = new Dictionary<int, int>();
+
+        //The Adjacency List: An array where each index contains a list of edges originating from that node.
         public List<WeightedEdge>[] adj;
 
         public Graph(List<GeoLocation> geos)
@@ -32,12 +40,12 @@ namespace server.Services
             for (int i = 0; i < vertices; i++)
             {
                 adj[i] = new List<WeightedEdge>();
-                IdtoIndex[geos[i].Id] = i;
+                IdtoIndex[geos[i].Id] = i;   // Store the mapping so we can find this GeoLocation's index later using its ID
             }
         }
 
-        // Add an undirected edge (both directions)
-        // Add an undirected edge (both directions)
+        /// Creates a bidirectional connection between two points.
+        /// Uses the Haversine Formula to calculate the great-circle distance (curvature of the Earth).
         public void AddEdge(GeoLocation source, GeoLocation destination)
         {
             // Map GeoLocation.Id to array index
@@ -59,7 +67,7 @@ namespace server.Services
             adj[destIdx].Add(edge2);
         }
 
-        // Print all edges in the graph
+        /// Debugging tool to visualize the graph structure in the console.
         public void PrintGraph()
         {
             for (int i = 0; i < vertices; i++)

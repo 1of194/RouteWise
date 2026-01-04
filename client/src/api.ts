@@ -1,7 +1,10 @@
 import axios from "axios";
-import { BACKEND_API_KEY } from "./HomePage";
+
 import { PageType, type LoginResponse } from "./models/UserModel";
 
+
+// Base URL for the backend service
+export const BACKEND_API_KEY = 'http://localhost:5000/api';
 
 const api = axios.create({
     baseURL: `${BACKEND_API_KEY}`,
@@ -14,44 +17,53 @@ const api = axios.create({
 });
 
 
-
-
+/**
+ * REQUEST INTERCEPTOR
+ * Runs before every request leaves the browser.
+ * It checks sessionStorage for an Access Token and attaches it to the Authorization header.
+ */
 api.interceptors.request.use(options => {
     const token = sessionStorage.getItem('token');
     if (token) {
         options.headers.Authorization = `Bearer ${token}`;
     }
-
-    
-
     return options;
 });
 
+
+/**
+ * RESPONSE INTERCEPTOR (The "Silent Refresh" Logic)
+ * Runs after every response comes back.
+ * If a 401 (Unauthorized) error occurs, it tries to refresh the token automatically.
+ */
 api.interceptors.response.use(
-    response => response,
+    response => response, // Pass successful responses through
     async error => {
       const originalRequest = error.config;
-      if (error.response?.status === 401 && !originalRequest._retry ) {
-        // Redirect to login or refresh token
-       originalRequest._retry = true;
+      // Avoid refreshing if already on login or register pages
+      if (error.response?.status === 401 && !originalRequest._retry && window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+  
+       originalRequest._retry = true;  // Mark as retried to prevent infinite loops
 
        try {
-        const reFreshResponse = await api.post('/refresh-token', {
-        },
-      {
-        withCredentials: true
-      });
+        // Attempt to get a new Access Token using the Refresh Token cookie
+        const reFreshResponse = await api.post('/refresh-token', {},
+        {
+          withCredentials: true
+        });
         
         if (reFreshResponse.status === 200) {
-          sessionStorage.setItem('token', reFreshResponse.data.accessToken);
+          // 1. Store the new token
+          sessionStorage.setItem('token', reFreshResponse.data.AccessToken);
           sessionStorage.setItem('login-access', 'true')
-          originalRequest.headers.Authorization = `Bearer ${reFreshResponse.data.accessToken}`;
+
+          // 2. Update the header for the original failed request
+          originalRequest.headers.Authorization = `Bearer ${reFreshResponse.data.AccessToken}`;
+          // 3. Re-run the original request with the new token
           return api(originalRequest);
         }
-
-
-
        } catch (refreshError) {
+        // If refresh fails, the user must log in again
         console.error("Token refresh failed", refreshError);
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('login-access')
@@ -59,14 +71,16 @@ api.interceptors.response.use(
         window.location.href = '/login';
         
        }
-
-        
       }
       return Promise.reject(error);
     }
   );
 
-
+/**
+ * LOGIN / REGISTER API
+ * Uses a separate axios instance to avoid the global interceptors during the login process.
+ * pageType 1 = Login, 2 = Registration
+ */
   export const login = async (
     username: string,
     password: string,
@@ -75,6 +89,7 @@ api.interceptors.response.use(
     const loginApi = axios.create({
       baseURL: `${BACKEND_API_KEY}`,
       timeout: 15000,
+      withCredentials:true,
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
@@ -86,12 +101,13 @@ api.interceptors.response.use(
         Username: username,
         Password: password,
         PageType: pageType,
-      });
+      }, );
   
       // Normalize server response to client shape
       const data = response.data;
       const normalized = {
         Message: data.message ?? data.Message, // server uses 'message'
+        user:data.user ?? data.User,
         accessToken: data.accessToken, // server uses PascalCase
         
       };
@@ -111,19 +127,21 @@ api.interceptors.response.use(
     }
   };
 
+  /**
+ * LOGOUT API
+ * Notifies the server to clear the HttpOnly Refresh Token cookie.
+ */
   
   export const logout = async () => {
     try {
       
-      const response = await api.post('/logout');
+      const response = await api.post('/logout', {});
       if (response.status === 200) {
-        sessionStorage.removeItem('token');
         return response.data.message;
       }
     } catch (error) {
       console.error("Logout failed", error);
       // Even if logout fails on server, clear session storage
-      sessionStorage.removeItem('token');
       return "Logged out successfully";
     }
   };

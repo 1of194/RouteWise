@@ -52,3 +52,42 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+server/appsettings.json
+server/RouteWiseDB.db
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+client/dist/
+client/build/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Visual Studio
+
+.vs/
+
+# User-specific files
+*.user
+*.rsuser
+
+# Rider IDE
+.idea/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Runtime config
+server.runtimeconfig.json

@@ -45,15 +45,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(o => o.AddPolicy("AllowFrontend", p =>
-    p.WithOrigins("http://localhost:5173")
-     .AllowCredentials()
+    p.WithOrigins("http://localhost:5173") // ONLY the specific URL
+     .AllowCredentials()                   // Required for cookies
      .AllowAnyHeader()
-     .AllowAnyMethod().SetIsOriginAllowed(origin => true)));
+     .AllowAnyMethod()));
+
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.CheckConsentNeeded = context => false;
+    options.MinimumSameSitePolicy = SameSiteMode.Lax; // Important for local development
+});
 
 
 var app = builder.Build();
 app.UseCors("AllowFrontend");
 app.UseRouting();
+app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseAuthorization();
 

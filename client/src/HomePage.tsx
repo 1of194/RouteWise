@@ -1,15 +1,16 @@
+// Import necessary modules and components
 import { useEffect, useState } from "react";
 import axios from "axios";
 import type { BookmarkResponse, DeliveryAddresses, DeliveryAddressResponse, PriorityLevel } from "./models/deliveryAddressModel";
 import { CheckCircle, XCircle, Bookmark, ChevronLeft, LogOutIcon } from "lucide-react";
 import BookmarksList from "./BookmarksList";
 import { useNavigate } from "react-router-dom";
-import { logout } from "./api";
+import { BACKEND_API_KEY, logout } from "./api";
+import { useAuth } from "./authContext";
 
-
-export const BACKEND_API_KEY = 'http://localhost:5000/api';
 
 function HomePage() {
+  // State variables for managing component state
   const [route, setRoute] = useState<string>("");
   const [checked, setChecked] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -21,12 +22,13 @@ function HomePage() {
   const [bookmarkBg, setBookmarkBg] = useState("bg-white");
   const [date, setDate] = useState<string>('');
   const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false);
-
   const [logoutMessage, setLogoutMessage] = useState<string> ('');
   const [successLogout, setSuccessLogout] = useState<boolean> (false);
+  const {logoutAction} = useAuth()
 
   const navigate = useNavigate();
 
+  // Effect to check authentication on component mount
   useEffect(() => {
     // Check if user is authenticated
     const token = sessionStorage.getItem('token');
@@ -35,22 +37,30 @@ function HomePage() {
     }
   }, [navigate]);
 
+  // Function to handle user logout
   const handleLogout = async () => {
     const result = await logout();
     console.log(result);
     if (result){
       setSuccessLogout(true); 
-      setLogoutMessage(result.message);
-    setTimeout(() => navigate('/login'), 3000);
+      setLogoutMessage(result.message || "Logged out successfully");
+    setTimeout(() => {
+    logoutAction(); // THIS triggers the redirect via ProtectedRoute
+    navigate('/login');
+  }, 3000);
     
     }
     else {
       setSuccessLogout(false); 
-      setLogoutMessage(result.message);
-      setTimeout(() => 3000);
+      setLogoutMessage(result.message || "Logged out successfully");
+      setTimeout(() => {
+    logoutAction(); 
+    navigate('/login');
+  }, 3000);
     }
   };
 
+  // Function to handle bookmarking a route
   const handleBookmark = async () => {
     if (!result) return;
 
@@ -62,6 +72,7 @@ function HomePage() {
     }
   };
 
+  // Function to bookmark a route by sending data to the backend
   const BookmarkRoute = async (saveroute: DeliveryAddresses[]): Promise<BookmarkResponse | undefined> => {
     try {
       console.log(saveroute);
@@ -108,6 +119,7 @@ function HomePage() {
     return undefined;
   };
 
+  // Function to handle form submission for adding a route
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsGenerating(true);
@@ -180,18 +192,18 @@ function HomePage() {
 
 
 
+  // Render the component UI
   return (
     <div id="homePageContent" className="flex relative flex-col min-h-screen justify-center items-center bg-gradient-to-b from-gray-50 to-gray-200 p-6 gap-8">
-      {logoutMessage && (successLogout ? (
-        <div className="flex items-center gap-2 p-4 rounded-md bg-green-100 border border-green-400 text-green-700 text-sm">
-          <CheckCircle className="w-5 h-5 text-green-600" />
-          <span>{message}</span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 p-4 rounded-md bg-red-100 border border-red-400 text-red-700 text-sm">
-          <XCircle className="w-5 h-5 text-red-600" />
-          <span>{message}</span>
-        </div>))}
+     {/*  LOGOUT HEADER SECTION  */}
+  {logoutMessage && (
+    <div className={`absolute top-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-3 rounded-md border shadow-md text-sm ${
+      successLogout ? "bg-green-50 border-green-400 text-green-700" : "bg-red-50 border-red-400 text-red-700"
+    }`}>
+      {successLogout ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+      <span className="font-medium">{logoutMessage}</span>
+    </div>
+  )}
       <button id="logoutButton" onClick={() => handleLogout()}
       className="absolute right-10 top-10 group flex items-center space-x-2 hover:text-red-600 transition-colors duration-300">
   <LogOutIcon className="w-6 h-6" />

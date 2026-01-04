@@ -1,29 +1,49 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense } from 'react';
 import './index.css';
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+import { AuthProvider, useAuth } from './authContext';
 // React.lazy takes a function that returns a promise (dynamic import)
 // and converts it into a loadable component
 const HomePage = React.lazy(() => import('./HomePage'));
 const Login = React.lazy(() => import('./Login'));
 
+
+/**
+ * ProtectedRoute Component
+ * Acts as a security "gatekeeper" for specific routes.
+ * It checks the global auth state before allowing access to children.
+ */
 interface ProtectedRouteProps {
-  isAuthenticated: boolean;
   children: React.ReactNode;
 }
 
-function ProtectedRoute({ isAuthenticated, children}:ProtectedRouteProps) {
+function ProtectedRoute({ children}:ProtectedRouteProps) {
+  const { isLoading,isAuthenticated} = useAuth();
+
+  //  While AuthProvider is checking sessionStorage or cookies for a token,
+  // we must show a loading state.
+   if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     // Redirect to login if not authenticated
     return <Navigate to="/login" replace />;
   }
+  // If authenticated, render the actual page
   return children;
 }
 
 function App() {
-   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return !!sessionStorage.getItem("accessToken"); // true if token exists
-  });
+
  return (
+  // AuthProvider must wrap everything so useAuth() works in any route
+  <AuthProvider>
   <BrowserRouter>
                 {/* 
           path = URL path 
@@ -36,7 +56,7 @@ function App() {
           path="/"
           element={
             <Suspense fallback={<div>Loading....</div>}>
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute>
                 <HomePage />
               </ProtectedRoute>
             </Suspense>
@@ -46,15 +66,13 @@ function App() {
           path="/login"
           element={
             <Suspense fallback={<div>Loading....</div>}>
-             <Login
-              onRegister={(authenticated) => setIsAuthenticated(authenticated)}
-              onLogin={(authenticated) => setIsAuthenticated(authenticated)}
-/>
+             <Login />
             </Suspense>
           }
         />
       </Routes>
     </BrowserRouter>
+    </AuthProvider>
   );
 }
 
